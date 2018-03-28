@@ -1,0 +1,13 @@
+motion_lights:
+  module: motion_lights
+  class: MotionLights
+  light_entity: light.hallway_lights
+  motion_sensor_entity: binary_sensor.ip_camera_motion
+  monitoring_input_entity: input_boolean.monitor_motion
+
+bedroom_heater:
+  module: bedroom_heater
+  class: BedroomHeater
+  heater_entity: switch.sonoff_1
+  temp_sensor_entity: sensor.dark_sky_temperature
+  temp_threshold: 50.0
