@@ -19,6 +19,15 @@ generic_timer:
         - ontime: "20:00"
           offtime: "22:00"
 
+periodic_timer:
+  module: generic_timer
+  class: PeriodicTimer
+  switch_entity: switch.sonoff_3
+  time_on: 60 # seconds
+  interval: 1800 # every half hour
+
+
+
 TODO:
 
 - test multiple entities in one configuration
@@ -47,6 +56,10 @@ class GenericTimer(hass.Hass):
                 self.log("Entity %s on at %s, off at %s" %
                     (entity, onTime, offTime), level = "DEBUG")
                 times.append((onTime, offTime))
+
+                self.run_daily(self.entity_on, onTime, entity_id = entity)
+                self.run_daily(self.entity_off, offTime, entity_id = entity)
+
             self.log("Times: %s" % times)
 
             # build a 2D array of on/off slots so we can figure out what
@@ -75,8 +88,6 @@ class GenericTimer(hass.Hass):
                 self.log("Initialize: turn off %s" % entity)
                 self.turn_off(entity)
 
-            self.run_daily(self.entity_on, onTime, entity_id = entity)
-            self.run_daily(self.entity_off, offTime, entity_id = entity)
 
     def entity_on(self, kwargs):
         self.log("Timer fired: turn on %s" % kwargs['entity_id'])
@@ -85,3 +96,31 @@ class GenericTimer(hass.Hass):
     def entity_off(self, kwargs):
         self.log("Timer fired: off %s" % kwargs['entity_id'])
         self.turn_off(kwargs['entity_id'])
+
+###################
+
+class PeriodicTimer(hass.Hass):
+    time_on = 0
+    interval = 0
+
+    def initialize(self):
+        self.switch_entity = self.args["switch_entity"]
+        self.time_on = int(self.args["time_on"]) # seconds
+        self.interval = int(self.args["interval"]) # seconds
+
+        self.log("Turning off %s at start, waiting %d" % (self.switch_entity,
+            self.interval))
+        self.turn_off(self.switch_entity)
+        self.run_in(self.turnOnSwitch, self.interval)
+
+    def turnOnSwitch(self, kwargs):
+        self.log("Turning on %s for %d seconds" % (self.switch_entity,
+            self.time_on))
+        self.turn_on(self.switch_entity)
+        self.run_in(self.turnOffSwitch, self.time_on)
+
+    def turnOffSwitch(self, kwargs):
+        self.log("Turning off %s for %d seconds" % (self.switch_entity,
+            self.interval))
+        self.turn_off(self.switch_entity)
+        self.run_in(self.turnOnSwitch, self.interval)
